@@ -54,7 +54,8 @@ define([
     updateAndRenderMask: function (main) {
       this.mesh_.updateDuplicateColorsAndMaterials();
       this.mesh_.updateFlatShading();
-      this.updateRender(main);
+      this.updateMeshBuffers();
+      main.render();
     },
     blur: function (mesh, main) {
       this.mesh_ = mesh;

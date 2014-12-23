@@ -26,6 +26,15 @@ define([
     this.texture0_ = null;
     this.matcap_ = 0; // the chosen matcap texture index
 
+    // local edit buffers
+    this.localVertexBuffer_ = new Buffer(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
+    this.localNormalBuffer_ = new Buffer(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
+    this.localColorBuffer_ = new Buffer(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
+    this.localMaterialBuffer_ = new Buffer(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
+    this.localTexCoordBuffer_ = new Buffer(gl, gl.ARRAY_BUFFER, gl.STATIC_DRAW);
+    this.localIndexBuffer_ = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW);
+    this.localWireframeBuffer_ = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW);
+
     this.exposure_ = 1.0;
     // these material values overrides the vertex attributes
     // it's here for debug or preview
@@ -76,25 +85,25 @@ define([
       return this.getShader().getType();
     },
     getVertexBuffer: function () {
-      return this.vertexBuffer_;
+      return this.mesh_.isLocalEdit() ? this.localVertexBuffer_ : this.vertexBuffer_;
     },
     getNormalBuffer: function () {
-      return this.normalBuffer_;
+      return this.mesh_.isLocalEdit() ? this.localNormalBuffer_ : this.normalBuffer_;
     },
     getColorBuffer: function () {
-      return this.colorBuffer_;
+      return this.mesh_.isLocalEdit() ? this.localColorBuffer_ : this.colorBuffer_;
     },
     getMaterialBuffer: function () {
-      return this.materialBuffer_;
+      return this.mesh_.isLocalEdit() ? this.localMaterialBuffer_ : this.materialBuffer_;
     },
     getTexCoordBuffer: function () {
-      return this.texCoordBuffer_;
+      return this.mesh_.isLocalEdit() ? this.localTexCoordBuffer_ : this.texCoordBuffer_;
     },
     getIndexBuffer: function () {
-      return this.indexBuffer_;
+      return this.mesh_.isLocalEdit() ? this.localIndexBuffer_ : this.indexBuffer_;
     },
     getWireframeBuffer: function () {
-      return this.wireframeBuffer_;
+      return this.mesh_.isLocalEdit() ? this.localWireframeBuffer_ : this.wireframeBuffer_;
     },
     /** Return true if the render is using drawArrays instead of drawElements */
     isUsingDrawArrays: function () {
@@ -102,13 +111,13 @@ define([
     },
     /** Return true if the shader is using UVs */
     isUsingTexCoords: function () {
-      return this.shader_.isUsingTexCoords();
+      return this.shader_.isUsingTexCoords() && !this.mesh_.isLocalEdit();
     },
     isTransparent: function () {
       return this.shader_.isTransparent();
     },
     getFlatShading: function () {
-      return this.flatShading_;
+      return this.flatShading_ && !this.mesh_.isLocalEdit();
     },
     getShowWireframe: function () {
       return this.showWireframe_;

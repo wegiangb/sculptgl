@@ -205,7 +205,8 @@ define([
 
       mesh.updateDuplicateColorsAndMaterials();
       mesh.updateFlatShading();
-      this.updateRender(main);
+      this.updateMeshBuffers();
+      main.render();
     }
   };
 
