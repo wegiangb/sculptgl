@@ -20,6 +20,12 @@ define([
     this.global_ = false; // global material
     this.pickCallback_ = null; // callback function after picking a color
     this.idAlpha_ = 0;
+
+    this.lockPosition_ = false;
+    this.lastVerts_ = null;
+    this.lastFaces_ = null;
+    this.lastVertsSym_ = null;
+    this.lastFacesSym_ = null;
   }
 
   Paint.prototype = {
@@ -33,13 +39,47 @@ define([
       var picking = main.getPicking();
       if (this.pickColor_)
         return this.pickColor(picking);
+      this.lastVerts_ = this.lastFaces_ = this.lastVertsSym_ = this.lastFacesSym_ = null;
       this.update(main);
     },
     /** Update sculpting operation */
     update: function (main) {
       if (this.pickColor_ === true)
         return this.updatePickColor(main);
-      this.sculptStroke(main);
+      if (this.lockPosition_ === false)
+        return this.sculptStroke(main);
+      this.updateSculptLock(main);
+    },
+    updateSculptLock: function (main) {
+      var dx = main.mouseX_ - this.lastMouseX_;
+      var dy = main.mouseY_ - this.lastMouseY_;
+
+      var picking = main.getPicking();
+      var origRad = picking.getScreenRadius();
+      var pickingSym = main.getSculpt().getSymmetry() ? main.getPickingSymmetry() : null;
+
+      this.applyBackOldEdit(this.lastVerts_, this.lastFaces_);
+      this.applyBackOldEdit(this.lastVertsSym_, this.lastFacesSym_);
+
+      picking.rDisplay_ = Math.sqrt(dx * dx + dy * dy);
+      this.makeStroke(this.lastMouseX_, this.lastMouseY_, picking, pickingSym);
+      picking.rDisplay_ = origRad;
+
+      this.updateRender(main);
+    },
+    applyBackOldEdit: function (iVerts, iFaces) {
+      if (!iVerts) return;
+      var mesh = this.mesh_;
+      var cAr = mesh.getColors();
+      var cProxy = mesh.getVerticesProxy();
+      for (var i = 0, nb = iVerts.length; i < nb; ++i) {
+        var ind = iVerts[i] * 3;
+        cAr[ind] = cProxy[ind];
+        cAr[ind + 1] = cProxy[ind + 1];
+        cAr[ind + 2] = cProxy[ind + 2];
+      }
+      mesh.updateDuplicateColorsAndMaterials(iVerts);
+      mesh.updateFlatShading(iFaces);
     },
     updateContinuous: function (main) {
       if (this.pickColor_ === true)
@@ -74,7 +114,7 @@ define([
       this.pickCallback_(color, roughness, metallic);
     },
     /** On stroke */
-    stroke: function (picking) {
+    stroke: function (picking, isSym) {
       var iVertsInRadius = picking.getPickedVertices();
       var intensity = this.intensity_ * Tablet.getPressureIntensity();
 
@@ -90,7 +130,15 @@ define([
       this.paint(iVertsInRadius, picking.getIntersectionPoint(), picking.getLocalRadius2(), intensity, this.hardness_, picking);
 
       this.mesh_.updateDuplicateColorsAndMaterials(iVertsInRadius);
-      this.mesh_.updateFlatShading(this.mesh_.getFacesFromVertices(iVertsInRadius));
+      var idFaces = this.mesh_.getFacesFromVertices(iVertsInRadius);
+      this.mesh_.updateFlatShading(idFaces);
+      if (isSym) {
+        this.lastVerts_ = iVertsInRadius;
+        this.lastFaces_ = idFaces;
+      } else {
+        this.lastVertsSym_ = iVertsInRadius;
+        this.lastFacesSym_ = idFaces;
+      }
     },
     /** Paint color vertices */
     paint: function (iVerts, center, radiusSquared, intensity, hardness, picking) {
